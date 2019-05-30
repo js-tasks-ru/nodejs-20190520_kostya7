@@ -4,6 +4,7 @@ class LimitExceededError extends Error {
 
     this.name = this.constructor.name;
     Error.captureStackTrace(this, this.constructor);
+
     this.code = 'LIMIT_EXCEEDED';
   }
 }
