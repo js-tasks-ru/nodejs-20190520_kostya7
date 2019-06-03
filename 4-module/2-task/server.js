@@ -37,7 +37,7 @@ server.on('request', (req, res) => {
         ensureDirectoryExistence(filepath);
         if (body.length > 1e6) {
           body = "";
-          res.writeHead(413).end('LIMIT_EXCEEDED');
+          res.statusCode(413).end('LIMIT_EXCEEDED');
           req.connection.destroy();
         }
       });
