@@ -138,6 +138,7 @@ describe('6-module-2-task', () => {
         });
 
         expect(response.statusCode).to.equal(400);
+        console.log(response.body);
         expect(response.body.errors.email).to.equal('Такой email уже существует');
       });
     });

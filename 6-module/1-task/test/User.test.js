@@ -25,14 +25,8 @@ describe('6-module-1-task', () => {
       expect(email.lowercase, 'значение email приводится к нижнему регистру').to.be.true;
       expect(email.trim, 'у значения email обрезаются лишние пробелы').to.be.true;
 
-      expect(
-          email.validate[0].validator('mail@mail.com'),
-          'валидный email проходит проверку'
-      ).to.be.true;
-      expect(
-          email.validate[0].validator('wrongmail'),
-          'невалидный email не проходит проверку'
-      ).to.be.false;
+      expect(email.validate[0].validator('mail@mail.com'), 'валидный email проходит проверку').to.be.true;
+      expect(email.validate[0].validator('wrongmail'), 'невалидный email не проходит проверку').to.be.false;
     });
 
     it('поле displayName имеет правильную конфигурацию', () => {
