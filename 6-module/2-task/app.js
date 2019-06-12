@@ -18,7 +18,7 @@ app.use(async (ctx, next) => {
     }
     else if (err.status) {
       ctx.status = err.status;
-      ctx.body = {errors: err.message};
+      ctx.body = {error: err.message};
     } else {
       ctx.status = 500;
       ctx.body = {error: 'Internal server error'};
