@@ -11,7 +11,8 @@ app.use(async (ctx, next) => {
   try {
     await next();
   } catch (err) {
-    if (err.status === 501) {
+      // Не смог иначе отловить ошибку эту, потому костыль )
+    if (err.status === 400 && err.message === 'Такой email уже существует') {
       ctx.status = 400;
       ctx.body = { errors: {email: 'Такой email уже существует'}};
     }
@@ -27,20 +28,12 @@ app.use(async (ctx, next) => {
 
 const router = new Router();
 
-const test = async (ctx, next) => {
+const checkMailValidate = async (ctx, next) => {
   await User.find({email: ctx.request.body.email})
       .then((res) => {
-        if (res.length) {
-          console.log(res);
-
-          ctx.throw(501);
-          // next();
-        } else {
-          ctx.status = 400;
-        }
+        if (res.length) ctx.throw(400, 'Такой email уже существует');
       });
-  await next(); // ctx.status = 404;
-  // ctx.body = {fdfd: 'fdfdf'};
+  await next();
 };
 
 router.get('/users', async (ctx) => {
@@ -49,57 +42,32 @@ router.get('/users', async (ctx) => {
 
 router.get('/users/:id', async (ctx) => {
   const id = ctx.params.id;
-  ctx.body = await User.findById(id).then((res) => {
-    if (res === null) {
-      ctx.throw(404);
-    }
+  ctx.body = await User.findById(id)
+      .then((res) => {
+    if (res === null) ctx.throw(404);
 
     return res;
   })
       .catch((e) => {
-        if (e.name === 'NotFoundError') {
-          ctx.throw(404);
-        } else {
-          ctx.throw(400);
-        }
+        e.name === 'NotFoundError' ? ctx.throw(404) : ctx.throw(400);
       });
 });
 
-router.patch('/users/:id', test, async (ctx) => {
-  console.log(111);
+router.patch('/users/:id', checkMailValidate, async (ctx) => {
   const id = ctx.params.id;
   const updateBody = {
     email: ctx.request.body.email,
     displayName: ctx.request.body.displayName,
   };
 
-  ctx.body = await User.findOneAndUpdate(id, updateBody, {runValidators: true}, (err, user) => {
-    if (err) {
-      ctx.status = 400;
-      return 'Некорректный email';
-    }
-    // ctx.status = 400;
-    return user;
-  })
+  ctx.body = await User.findOneAndUpdate(id, updateBody, { runValidators: true }, (err, user) => user)
       .catch((e) => {
         const errors = Object.keys(e.errors).map((key) => {
           return ({errors: {[key]: e.errors[key].message}});
         });
         ctx.status = 400;
+        // Здесь, очевидно, тоже костыль, т.к. обращается к конкретному индексу
         return errors[1];
-        // if (e.message === 'Некорректный email') {
-        //   ctx.status = 400;
-
-        //   return errors.forEach((e) => e.errors.email === 'Некорректный email');
-        // } else if (e.message === 'Такой email уже существует') {
-        //   ctx.status = 400;
-        //
-        //   return errors.forEach((e) => e.errors.email === 'Такой email уже существует');
-        // } else {
-        //   ctx.status = 400;
-        //
-        //   return errors.forEach((e) => e.errors.email === 'Такой email уже существует');
-        // }
       });
 });
 
@@ -109,6 +77,7 @@ router.post('/users', async (ctx) => {
     email: body.email,
     displayName: body.displayName,
   });
+
   ctx.body = await user.save()
       .catch((e) => {
         const errors = Object.keys(e.errors).map((key) => ({errors: {email: e.errors[key].message}}));
@@ -120,7 +89,7 @@ router.post('/users', async (ctx) => {
 router.delete('/users/:id', async (ctx) => {
   const id = ctx.params.id;
 
-  ctx.body = await User.findByIdAndDelete(id).then((result) => {
+  ctx.body = await User.findByIdAndDelete(id).then(result => {
     if (result === null) {
       ctx.throw(404);
     }
