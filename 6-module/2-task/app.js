@@ -1,7 +1,6 @@
 const Koa = require('koa');
 const Router = require('koa-router');
 const User = require('./models/User');
-const mongoose = require('mongoose');
 
 const app = new Koa();
 
@@ -37,47 +36,21 @@ const checkMailValidate = async (ctx, next) => {
   await next();
 };
 
-function validateId(ctx, next) {
-    const id = ctx.params.id;
-
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-        ctx.throw(400);
-    }
-
-    return next();
-}
-
-// async function handleMongooseValidationError(ctx, next) {
-//     try {
-//         await next();
-//     } catch(e) {
-//         if (e.name !== 'ValidationError') throw e;
-//
-//         ctx.status = 400;
-//         const errors = {};
-//
-//         for (const field in e.errors) {
-//             errors[field] = e.errors[field].message;
-//         }
-//
-//         ctx.body = {
-//             errors: errors
-//         };
-//     }
-// }
-
 router.get('/users', async (ctx) => {
-  ctx.body = await User.find({});
+  ctx.body = await User.find({}).then((users) => users);
 });
 
-router.get('/users/:id', validateId, async (ctx) => {
+router.get('/users/:id', async (ctx) => {
   const id = ctx.params.id;
-  const user = await User.findById(id);
-      if (!user) {
-          ctx.throw(404);
-      }
+  ctx.body = await User.findById(id)
+      .then((res) => {
+    if (res === null) ctx.throw(404);
 
-      ctx.body = user;
+    return res;
+  })
+      .catch((e) => {
+        e.name === 'NotFoundError' ? ctx.throw(404) : ctx.throw(400);
+      });
 });
 
 router.patch('/users/:id', checkMailValidate, async (ctx) => {
@@ -98,22 +71,6 @@ router.patch('/users/:id', checkMailValidate, async (ctx) => {
       });
 });
 
-// router.patch('/users/:id', validateId, handleValidationErrors, async (ctx) => {
-//     const fields = _.pick(ctx.request.body, ['displayName', 'email']);
-//
-//     const user = await User.findByIdAndUpdate(ctx.params.id, fields, {
-//         runValidators: true,
-//         new: true,
-//     });
-//
-//     ctx.body = user;
-// });
-
-// router.post('/users', handleMongooseValidationError, async (ctx) => {
-//     const fields = _.pick(ctx.request.body, ['displayName', 'email']);
-//     ctx.body = await User.create(fields);
-// });
-
 router.post('/users', async (ctx) => {
   const body = ctx.request.body;
   const user = new User({
@@ -129,15 +86,15 @@ router.post('/users', async (ctx) => {
       });
 });
 
-router.delete('/users/:id', validateId, async (ctx) => {
+router.delete('/users/:id', async (ctx) => {
   const id = ctx.params.id;
 
-  const user = await User.findByIdAndDelete(id);
-    if (!user) {
+  ctx.body = await User.findByIdAndDelete(id).then(result => {
+    if (result === null) {
       ctx.throw(404);
     }
-
-    ctx.body = user;
+    return result;
+  });
 });
 
 app.use(router.routes());
